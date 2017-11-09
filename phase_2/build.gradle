@@ -1,0 +1,14 @@
+apply plugin: 'java'
+
+
+group = 'com.phase2'
+
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testCompile group: 'junit', name: 'junit', version: '4.+'
+}
+
