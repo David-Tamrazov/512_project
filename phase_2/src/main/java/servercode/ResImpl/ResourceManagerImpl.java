@@ -154,7 +154,7 @@ public class ResourceManagerImpl implements ResourceManager {
             if(!operationSet.containsKey(id) ) {
                 operationSet.put(id, new HashMap());
 
-                originalItem =
+//                originalItem =
             }
 
             ((HashMap)(operationSet.get(id))).put(key, deleteItem);
