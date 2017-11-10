@@ -6,17 +6,20 @@ import servercode.LockManager.DeadlockException;
 import servercode.ResInterface.MiddlewareServer;
 import servercode.LockManager.LockManager;
 import servercode.ResInterface.ResourceManager;
+import servercode.ResInterface.Transaction;
 
-public class TransactionManager {
+public class TransactionManager implements Transaction {
 
     private Map<Integer, ActiveTransaction> activeTransactions; 
     private LockManager lm;
     private MiddlewareServer parent;
+    private int xid;
 
     public TransactionManager(MiddlewareServer parent, Map<Integer, ActiveTransaction> activeTransactions, LockManager lm) {
         setParent(parent);
         setTransactionMap(activeTransactions);
         setLockManager(lm);
+        setXID();
     }
 
 
@@ -46,18 +49,41 @@ public class TransactionManager {
         }
 
         try {
+
             boolean acquired = lm.Lock(xid, strData, locktype);
-
-
+            ActiveTransaction txn = this.activeTransactions.get(xid);
+            txn.addActiveManager(rm);
+            return true;
 
         } catch (DeadlockException e) {
             System.out.println(String.format("Deadlock exception for xid %d getting locktype %d for datatype %s", xid, locktype, strData));
-            abort
+            abort(xid);
             return false;
         }
 
     }
 
+    public void start(int xid)  {
+
+        if (!this.activeTransactions.containsKey(xid)) {
+
+        }
+
+    }
+
+    public void commit(int xid) {
+
+    }
+
+    public void abort(int xid) {
+
+    }
+
+
+
+    private void addTransaction(int xid) {
+        ActiveTransaction txn = new ActiveTransaction(10000);
+    }
 
     private void setParent(MiddlewareServer parent) {
         this.parent = parent;
@@ -69,6 +95,10 @@ public class TransactionManager {
 
     private void setLockManager(LockManager lm) {
         this.lm = lm;
+    }
+
+    private void setXID() {
+        this.xid = 0;
     }
 
     

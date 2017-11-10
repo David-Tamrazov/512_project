@@ -22,12 +22,6 @@ import java.util.*;
  */
 
 public interface ResourceManager extends Remote, Transaction {
-
-
-    public void start(int xid);
-    public void commit(int xid);
-    public void abort(int xid);
-
     
     /* Add seats to a flight.  In general this will be used to create a new
      * flight, but it should be possible to add seats to an existing flight.
