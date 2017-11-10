@@ -19,5 +19,5 @@ public interface MiddlewareServer extends ResourceManager {
     public ResourceManager getFlightManager() throws RemoteException;
     public ResourceManager getCarManager() throws RemoteException;
     public ResourceManager getRoomManager() throws RemoteException;
-    
+
 }

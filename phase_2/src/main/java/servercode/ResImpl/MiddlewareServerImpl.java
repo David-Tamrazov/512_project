@@ -1,7 +1,7 @@
 package servercode.ResImpl;
 
 import servercode.ResInterface.*;
-import servercode.LockManager.LockManager;
+import servercode.TransactionManager.TransactionManager;
 
 import java.util.*;
 import java.io.*;
@@ -12,6 +12,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RMISecurityManager;
+
 
 public class MiddlewareServerImpl implements MiddlewareServer {
     
@@ -45,15 +46,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
         }
     }
 
-    public void start(int xid) throws RemoteException {
+    public void start(int xid)  {
 
     }
 
-    public void commit(int xid) throws RemoteException {
+    public void commit(int xid) {
 
     }
 
-    public void abort(int xid) throws RemoteException {
+    public void abort(int xid) {
         
     }
 
@@ -61,6 +62,7 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     // Create a new flight, or add seats to existing flight
     //  NOTE: if flightPrice <= 0 and the flight already exists, it maintains its current price
     public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
+
         return this.getFlightManager().addFlight(id, flightNum, flightSeats, flightPrice);
     }
 
