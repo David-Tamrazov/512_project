@@ -69,13 +69,13 @@ public class LockManager
 
                             System.out.println("Lock conversion.");
 
+                            // remove the old locks from the hashtable
+                            this.lockTable.removeAll(trxnObj);
+
                             // add the new lock they're requesting 
                             this.lockTable.add(dataObj);
                             this.lockTable.add(trxnObj);
 
-                            // remove their old lock
-                            int oldLock = lockType == DataObj.READ ? DataObj.WRITE : DataObj.READ;
-                            this.removeLock(xid, oldLock);
 
                         } else {
                             // a lock request that is not lock conversion
@@ -101,39 +101,7 @@ public class LockManager
         return true;
     }
 
-    // remove this particular lock for this transaction from the lock table
-    private void  removeLock(int xid, int locktype) {
 
-        // if any parameter is invalid, then return false
-        if (xid < 0) {
-            return;
-        }
-
-        TrxnObj trxnQueryObj = new TrxnObj(xid, "", -1);  // Only used in elements() call below.
-        synchronized (this.lockTable) {
-
-            Vector vect = this.lockTable.elements(trxnQueryObj);
-            int size = vect.size();
-
-            for (int i = (size - 1); i >= 0; i--) {
-
-                TrxnObj trxnObj = (TrxnObj) vect.elementAt(i);
-
-                if (trxnObj.xid == xid && trxnObj.lockType == locktype) {
-
-                    this.lockTable.remove(trxnObj);
-
-                    DataObj dataObj = new DataObj(trxnObj.getXId(), trxnObj.getDataName(), trxnObj.getLockType());
-                    this.lockTable.remove(dataObj);
-                    this.lockTable.remove(trxnObj);
-                    break;
-                }
-
-            }
-        }
-
-
-    }
     
     // remove all locks for this transaction in the lock table.
     private boolean  UnlockAll(int xid) {

@@ -1,6 +1,8 @@
 package servercode.ResImpl;
 
 import servercode.ResInterface.*;
+import servercode.TransactionManager.InvalidTransactionException;
+import servercode.TransactionManager.TransactionAbortedException;
 import servercode.TransactionManager.TransactionManager;
 
 import java.util.*;
@@ -46,16 +48,17 @@ public class MiddlewareServerImpl implements MiddlewareServer {
         }
     }
 
-    public void start(int xid)  {
-
+    public int start()  {
+        return 0;
     }
 
-    public void commit(int xid) {
-
+    public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
+        return true;
     }
 
-    public void abort(int xid) {
-        
+    public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+
     }
 
         

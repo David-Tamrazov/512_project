@@ -60,9 +60,7 @@ public class LockManagerTest {
             boolean cannotConvert = lm.LockConflict(obj, new BitSet());
             assertTrue(cannotConvert);
 
-        } catch (DeadlockException e) {
-
-        } catch (RedundantLockRequestException e) {
+        } catch (DeadlockException | RedundantLockRequestException e) {
 
         }
     }
