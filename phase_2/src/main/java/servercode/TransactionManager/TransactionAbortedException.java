@@ -1,10 +1,10 @@
 package servercode.TransactionManager;
 
-public class InvalidTransactionException extends Exception {
+public class TransactionAbortedException extends Exception {
 
     private int xid;
 
-    public InvalidTransactionException(int xid, String msg) {
+    public TransactionAbortedException(int xid, String msg) {
         super(msg);
         setXID(xid);
     }
@@ -12,6 +12,4 @@ public class InvalidTransactionException extends Exception {
     private void setXID(int i) {
         this.xid = i;
     }
-
-
 }
