@@ -19,7 +19,8 @@ import java.rmi.RMISecurityManager;
 public class ResourceManagerImpl implements ResourceManager {
     
     protected RMHashtable m_itemHT = new RMHashtable();
-    protected RMHashtable uncommittedTable = new RMHashtable();
+    protected HashMap operationSet = new HashMap<Integer, HashMap<String, RMItem>>();
+//    protected HashMap removeSet = new HashMap<Integer, ArrayList<String>>();
 
 
     public static void main(String args[]) {
@@ -34,7 +35,7 @@ public class ResourceManagerImpl implements ResourceManager {
             objName = args[1];
             server = server + ":" + args[0];
             port = Integer.parseInt(args[0]);
-        } else if (args.length != 0 && args.length != 1 && args.length != 2) {
+        } else if (args.length != 0) {
             System.err.println ("Wrong usage");
             System.out.println("Usage: java ResImpl.ResourceManagerImpl [port]");
             System.exit(1);
@@ -68,41 +69,97 @@ public class ResourceManagerImpl implements ResourceManager {
     public ResourceManagerImpl() throws RemoteException {
     }
 
+//    // Reads a data item
+//    private RMItem readData( int id, String key )
+//    {
+//        synchronized(m_itemHT) {
+//            return (RMItem) m_itemHT.get(key);
+//        }
+//    }
+//
+//    // Writes a data item
+//    private void writeData( int id, String key, RMItem value )
+//    {
+//        synchronized(m_itemHT) {
+//            m_itemHT.put(key, value);
+//        }
+//    }
+//
+//    // Remove the item out of storage
+//    protected RMItem removeData(int id, String key) {
+//        synchronized(m_itemHT) {
+//            return (RMItem)m_itemHT.remove(key);
+//        }
+//    }
 
     public int start()  {
-
+        return 1;
     }
 
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
+        if(!operationSet.containsKey(xid)) {
+            throw new InvalidTransactionException(xid, xid + " isn't a valid transaction id");
+        }
+
+        for (Map.Entry<String, HashMap> operationSetEntry : ((HashMap<String, HashMap>)operationSet.get(xid)).entrySet()) {
+            m_itemHT.put(operationSetEntry.getKey(), operationSetEntry.getValue());
+        }
+
+//        for (Object key : (ArrayList) removeSet.get(xid)) {
+//            m_itemHT.remove(key);
+//        }
+
+        return true;
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
 
-
     }
-     
 
     // Reads a data item
-    private RMItem readData( int id, String key )
-    {
+    private RMItem readData( int id, String key ) {
         synchronized(m_itemHT) {
-            return (RMItem) m_itemHT.get(key);
+            synchronized(operationSet) {
+                if(!operationSet.containsKey(id)) {
+                    operationSet.put(id, new HashMap());
+                }
+
+                if (!((HashMap) (operationSet.get(id))).containsKey(key)) {
+                    ((HashMap)(operationSet.get(id))).put(key, m_itemHT.get(key));
+                }
+
+                return (RMItem) ((HashMap) (operationSet.get(id))).get(key);
+
+            }
         }
     }
 
     // Writes a data item
-    private void writeData( int id, String key, RMItem value )
-    {
-        synchronized(m_itemHT) {
-            m_itemHT.put(key, value);
+    private void writeData ( int id, String key, RMItem value) {
+        synchronized (operationSet) {
+            ((HashMap)((HashMap)(operationSet.get(id))).get(key)).put(key, value);
         }
     }
-    
+
     // Remove the item out of storage
     protected RMItem removeData(int id, String key) {
-        synchronized(m_itemHT) {
-            return (RMItem)m_itemHT.remove(key);
+
+        RMItem deleteItem = new Customer(-1);
+
+        RMItem originalItem;
+
+
+        synchronized (operationSet) {
+            if(!operationSet.containsKey(id) ) {
+                operationSet.put(id, new HashMap());
+
+                originalItem =
+            }
+
+            ((HashMap)(operationSet.get(id))).put(key, deleteItem);
+
+
         }
     }
     
