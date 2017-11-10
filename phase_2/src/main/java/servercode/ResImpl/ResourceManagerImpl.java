@@ -5,6 +5,8 @@
 package servercode.ResImpl;
 
 import servercode.ResInterface.*;
+import servercode.TransactionManager.InvalidTransactionException;
+import servercode.TransactionManager.TransactionAbortedException;
 
 import java.util.*;
 
@@ -67,16 +69,17 @@ public class ResourceManagerImpl implements ResourceManager {
     }
 
 
-    public void start(int xid) {
+    public int start()  {
 
     }
 
-    public void commit(int xid) {
+    public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
     }
 
-    public void abort(int xid) {
-        
+    public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+
     }
      
 

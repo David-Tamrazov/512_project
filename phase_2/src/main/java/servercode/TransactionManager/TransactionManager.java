@@ -1,5 +1,7 @@
 package servercode.TransactionManager;
 
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 import java.util.*;
 
 import servercode.LockManager.DeadlockException;
@@ -63,25 +65,30 @@ public class TransactionManager implements Transaction {
 
     }
 
-    public void start(int xid)  {
+    public int start()  {
 
-        if (!this.activeTransactions.containsKey(xid)) {
+        // increment the transaction counter
+        xid += 1;
 
-        }
+        // add the transaction to the active transactions list
+        addActiveTransaction(xid);
 
-    }
-
-    public void commit(int xid) {
-
-    }
-
-    public void abort(int xid) {
+        // return the transaction id
+        return xid;
 
     }
 
+    public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
+
+    }
+
+    public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+    }
 
 
-    private void addTransaction(int xid) {
+
+    private void addActiveTransaction(int xid) {
         ActiveTransaction txn = new ActiveTransaction(10000);
     }
 
