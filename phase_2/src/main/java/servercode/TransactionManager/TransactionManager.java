@@ -4,6 +4,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
 
+import org.omg.CORBA.DynAnyPackage.Invalid;
+import org.omg.PortableInterceptor.ACTIVE;
 import servercode.LockManager.DeadlockException;
 import servercode.ResInterface.MiddlewareServer;
 import servercode.LockManager.LockManager;
@@ -12,56 +14,23 @@ import servercode.ResInterface.Transaction;
 
 public class TransactionManager implements Transaction {
 
-    private Map<Integer, ActiveTransaction> activeTransactions; 
-    private LockManager lm;
+    private Map<Integer, ActiveTransaction> activeTransactions;
     private MiddlewareServer parent;
     private int xid;
 
     public TransactionManager(MiddlewareServer parent, Map<Integer, ActiveTransaction> activeTransactions, LockManager lm) {
         setParent(parent);
         setTransactionMap(activeTransactions);
-        setLockManager(lm);
         setXID();
     }
 
+    public boolean transactionOperation(int xid, int locktype, String strData, ResourceManager rm) throws InvalidTransactionException, RemoteException {
 
-    public boolean startTransaction(int xid) throws IllegalArgumentException {
-
-
-        if (this.activeTransactions.containsKey(new Integer(xid))) {
-            throw new IllegalArgumentException("Starting a transaction with an id that already exists.");
+        if (!addActiveManager(xid, rm)) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for txn operation");
         }
 
-        // add the transaction to the list of active transactions
-        this.activeTransactions.put(new Integer(xid), new ActiveTransaction(10000));
         return true;
-
-    }
-
-    public Map<Integer, ActiveTransaction> getActiveTransactions() {
-        Map<Integer, ActiveTransaction> shallowCopy = new HashMap<Integer, ActiveTransaction>();
-        shallowCopy.putAll(this.activeTransactions);
-        return shallowCopy;
-    }
-
-    public boolean transactionOperation(int xid, int locktype, String strData, ResourceManager rm) throws IllegalArgumentException {
-
-        if (!this.activeTransactions.containsKey(xid)) {
-            throw new IllegalArgumentException("Performing operation for nonexisting transaction");
-        }
-
-        try {
-
-            boolean acquired = lm.Lock(xid, strData, locktype);
-            ActiveTransaction txn = this.activeTransactions.get(xid);
-            txn.addActiveManager(rm);
-            return true;
-
-        } catch (DeadlockException e) {
-            System.out.println(String.format("Deadlock exception for xid %d getting locktype %d for datatype %s", xid, locktype, strData));
-            abort(xid);
-            return false;
-        }
 
     }
 
@@ -80,6 +49,29 @@ public class TransactionManager implements Transaction {
 
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
+        // if the transaction doesn't exist in the list of active transactions, throw an exception
+        if (!this.activeTransactions.containsKey(xid)) {
+            throw new InvalidTransactionException(xid, "Invalid transaction passed for commit.");
+        }
+
+        // remove the transaction from the list of transactions a
+        ActiveTransaction t = this.activeTransactions.get(xid);
+
+        try {
+
+            // remove the transaction from the list of active transactions
+            this.activeTransactions.remove(xid);
+
+            // return the commit result from t
+            return t.commit(xid);
+
+        } catch(InvalidTransactionException | TransactionAbortedException | RemoteException e) {
+
+            throw e;
+
+        }
+
+
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
@@ -87,9 +79,27 @@ public class TransactionManager implements Transaction {
     }
 
 
+    public Map<Integer, ActiveTransaction> getActiveTransactions() {
+        Map<Integer, ActiveTransaction> shallowCopy = new HashMap<Integer, ActiveTransaction>();
+        shallowCopy.putAll(this.activeTransactions);
+        return shallowCopy;
+    }
+
+    private boolean addActiveManager(int xid, ResourceManager rm) {
+
+        if (!this.activeTransactions.containsKey(xid)) {
+            return false;
+        }
+
+        ActiveTransaction txn = this.activeTransactions.get(xid);
+        txn.addActiveManager(rm);
+
+        return true;
+    }
 
     private void addActiveTransaction(int xid) {
-        ActiveTransaction txn = new ActiveTransaction(10000);
+        ActiveTransaction txn = new ActiveTransaction(xid, 10000, new ArrayList<ResourceManager>());
+        this.activeTransactions.put(xid, txn);
     }
 
     private void setParent(MiddlewareServer parent) {
@@ -97,12 +107,9 @@ public class TransactionManager implements Transaction {
     }
 
     private void setTransactionMap(Map<Integer, ActiveTransaction> activeTransactions) {
-        this.activeTransactions = new HashMap<Integer, ActiveTransaction>();
+        this.activeTransactions = activeTransactions;
     }
 
-    private void setLockManager(LockManager lm) {
-        this.lm = lm;
-    }
 
     private void setXID() {
         this.xid = 0;

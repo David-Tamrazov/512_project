@@ -4,6 +4,8 @@
 //
 package servercode.ResImpl;
 
+import servercode.LockManager.DeadlockException;
+import servercode.LockManager.LockManager;
 import servercode.ResInterface.*;
 import servercode.TransactionManager.InvalidTransactionException;
 import servercode.TransactionManager.TransactionAbortedException;
@@ -15,11 +17,14 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RMISecurityManager;
+import java.util.concurrent.locks.Lock;
 
 public class ResourceManagerImpl implements ResourceManager {
     
     protected RMHashtable m_itemHT = new RMHashtable();
     protected RMHashtable uncommittedTable = new RMHashtable();
+    protected LockManager lm;
+    protected String resource;
 
 
     public static void main(String args[]) {
@@ -41,8 +46,13 @@ public class ResourceManagerImpl implements ResourceManager {
         }
 
         try {
+
+            // create a lock manager for this RM
+            LockManager lm = new LockManager();
+
             // create a new Server object
-            ResourceManagerImpl obj = new ResourceManagerImpl();
+            ResourceManagerImpl obj = new ResourceManagerImpl(lm);
+
             // dynamically generate the stub (client proxy)
             ResourceManager rm = (ResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
@@ -51,6 +61,8 @@ public class ResourceManagerImpl implements ResourceManager {
 
             System.out.println("Binding resource manager object to: " + objName);
             registry.rebind(objName, rm);
+
+
 
 
             System.err.println("Server ready");
@@ -65,45 +77,86 @@ public class ResourceManagerImpl implements ResourceManager {
         }
     }
      
-    public ResourceManagerImpl() throws RemoteException {
+    public ResourceManagerImpl(LockManager lm) throws RemoteException {
+
+        setLockManager(lm);
     }
 
 
     public int start()  {
-
+        return 0;
     }
 
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
-
+        return true;
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
 
 
     }
+
+    private void setLockManager(LockManager lm) {
+        this.lm = lm;
+    }
      
 
     // Reads a data item
-    private RMItem readData( int id, String key )
-    {
-        synchronized(m_itemHT) {
-            return (RMItem) m_itemHT.get(key);
+    private RMItem readData( int id, String key ) {
+
+        try {
+
+            // obtain a read lock  for this item
+            boolean locked = lm.Lock(id, key, LockManager.READ);
+
+            // read and return the item
+            synchronized(m_itemHT) {
+                return (RMItem) m_itemHT.get(key);
+            }
+
+            // return null and check for it on the mws
+        } catch (DeadlockException e) {
+            return null;
         }
+
+
     }
 
     // Writes a data item
-    private void writeData( int id, String key, RMItem value )
-    {
-        synchronized(m_itemHT) {
-            m_itemHT.put(key, value);
+    private boolean writeData( int id, String key, RMItem value ) {
+
+        try {
+
+            boolean locked = lm.Lock(id, key, LockManager.WRITE);
+
+            synchronized(m_itemHT) {
+                m_itemHT.put(key, value);
+            }
+
+            return true;
+
+        } catch (DeadlockException e) {
+           return false;
         }
+
     }
     
     // Remove the item out of storage
     protected RMItem removeData(int id, String key) {
-        synchronized(m_itemHT) {
-            return (RMItem)m_itemHT.remove(key);
+
+        try {
+
+            lm.Lock(id, key, LockManager.WRITE);
+
+            synchronized(m_itemHT) {
+                return (RMItem)m_itemHT.remove(key);
+            }
+
+        } catch(DeadlockException e) {
+            return null;
         }
+
+
     }
     
     
@@ -117,8 +170,8 @@ public class ResourceManagerImpl implements ResourceManager {
             Trace.warn("RM::deleteItem(" + id + ", " + key + ") failed--item doesn't exist" );
             return false;
         } else {
-            if (curObj.getReserved()==0) {
-                removeData(id, curObj.getKey());
+            if (curObj.getReserved()==0 && removeData(id, curObj.getKey()) != null) {
+
                 Trace.info("RM::deleteItem(" + id + ", " + key + ") item deleted" );
                 return true;
             }
