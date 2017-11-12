@@ -1,6 +1,7 @@
 package servercode.TransactionManager;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.*;
 import servercode.ResInterface.ResourceManager;
 import servercode.ResInterface.Transaction;
@@ -13,6 +14,7 @@ public class ActiveTransaction implements Transaction {
     // how long this transaction has to live 
     private int timeToLive;
     private int xid;
+    private Date lastTransationTime;
 
     public ActiveTransaction(int xid, int timeToLive, ArrayList<ResourceManager> resourceManagers) {
         setXID(xid);
@@ -34,6 +36,14 @@ public class ActiveTransaction implements Transaction {
 
         return 0;
 
+    }
+
+    public void updateLastTransaction() {
+        this.lastTransationTime =  new Date();
+    }
+
+    public Date getLastTransationTime() {
+        return this.lastTransationTime;
     }
 
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
@@ -72,6 +82,10 @@ public class ActiveTransaction implements Transaction {
     }
     private void setTimeToLive(int i) {
         this.timeToLive = i;
+    }
+
+    public int getTimeToLive() {
+        return this.timeToLive;
     }
 
     private void setActiveManagers(ArrayList<ResourceManager> resourceManagers) {

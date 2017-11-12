@@ -120,13 +120,15 @@ public class ResourceManagerImpl implements ResourceManager {
             throw new InvalidTransactionException(xid, xid + " isn't a valid transaction id");
         }
 
-        for (Map.Entry<String, HashMap> operationSetEntry : ((HashMap<String, HashMap>)operationSet.get(xid)).entrySet()) {
-            m_itemHT.put(operationSetEntry.getKey(), operationSetEntry.getValue());
-        }
+        for (Map.Entry<String, RMItem> operationSetEntry : ((HashMap<String, RMItem>)operationSet.get(xid)).entrySet()) {
 
-//        for (Object key : (ArrayList) removeSet.get(xid)) {
-//            m_itemHT.remove(key);
-//        }
+            if(operationSetEntry.getValue() instanceof Customer && ((Customer)operationSetEntry.getValue()).getID() == -1) {
+                m_itemHT.remove(operationSetEntry.getKey());
+            } else {
+                m_itemHT.put(operationSetEntry.getKey(), operationSetEntry.getValue());
+            }
+
+        }
 
         return true;
 
@@ -158,7 +160,7 @@ public class ResourceManagerImpl implements ResourceManager {
             boolean locked = lm.Lock(id, key, LockManager.READ);
 
             // read and return the item
-            return (RMItem) readData(id, key);
+            return read(id, key);
 
 
             // return null and check for it on the mws
@@ -235,24 +237,15 @@ public class ResourceManagerImpl implements ResourceManager {
     protected RMItem remove(int id, String key) {
 
         RMItem deleteItem = new Customer(-1);
-
         RMItem originalItem;
-
 
         synchronized (operationSet) {
 
-            if(!operationSet.containsKey(id) ) {
+            originalItem = (RMItem) ((HashMap) (operationSet.get(id))).get(key);
 
-                operationSet.put(id, new HashMap());
+            write (id, key, deleteItem);
 
-//                originalItem =
-            }
-
-            HashMap<String, RMItem> removeSet = (HashMap<String, RMItem>) operationSet.get(id);
-            removeSet.put(key, deleteItem);
-
-            return deleteItem;
-
+            return originalItem;
 
         }
 

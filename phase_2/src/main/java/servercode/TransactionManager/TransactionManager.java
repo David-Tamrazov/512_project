@@ -2,6 +2,7 @@ package servercode.TransactionManager;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.*;
 
 import org.omg.CORBA.DynAnyPackage.Invalid;
@@ -22,6 +23,19 @@ public class TransactionManager implements Transaction {
         setParent(parent);
         setTransactionMap(activeTransactions);
         setXID();
+
+        (new Thread() {
+            public void run() {
+                while(true) {
+                    for(Map.Entry<Integer, ActiveTransaction> activeTransaction : getActiveTransactions().entrySet()) {
+                        if(activeTransaction.getValue().getLastTransationTime().getTime() - new Date().getTime() > activeTransaction.getValue().getTimeToLive()) {
+                            System.out.println("Abort this damn transation");
+//                            abort/commit? activeTransaction
+                        }
+                    }
+                }
+            }
+        }).start();
     }
 
     public boolean transactionOperation(int xid, int locktype, String strData, ResourceManager rm) throws InvalidTransactionException, RemoteException {
@@ -92,6 +106,9 @@ public class TransactionManager implements Transaction {
         }
 
         ActiveTransaction txn = this.activeTransactions.get(xid);
+
+        txn.updateLastTransaction();
+
         txn.addActiveManager(rm);
 
         return true;
