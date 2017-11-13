@@ -49,7 +49,7 @@ public class ActiveTransaction implements Transaction {
 
             try {
 
-                success = rm.commit(xid);
+                rm.commit(xid);
 
             } catch(InvalidTransactionException | TransactionAbortedException | RemoteException e) {
 
@@ -59,8 +59,7 @@ public class ActiveTransaction implements Transaction {
 
         }
 
-        return success;
-
+        return true;
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
