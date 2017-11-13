@@ -19,6 +19,7 @@ public class KeepaliveThread implements Runnable {
     public void run() {
 
         while (true) {
+
             for(Map.Entry<Integer, ActiveTransaction> activeTransaction : activeTransactionMap.entrySet()) {
 
                 if(activeTransaction.getValue().getLastTransationTime().getTime() - new Date().getTime() > activeTransaction.getValue().getTimeToLive()) {
@@ -34,9 +35,21 @@ public class KeepaliveThread implements Runnable {
 
                     } catch (InvalidTransactionException | RemoteException e) {
 
+                        System.out.println("Keepalive thread interrupted.");
                     }
                 }
             }
+
+            try {
+
+                Thread.sleep(100);
+
+            } catch (InterruptedException e) {
+
+                Thread.interrupted();
+
+            }
+
         }
     }
 

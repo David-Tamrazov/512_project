@@ -41,7 +41,7 @@ public class ActiveTransaction implements Transaction {
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
         if (xid != this.xid) {
-            throw new InvalidTransactionException(xid, "Invalid transaction exception passed to transaction commit.");
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed to transaction commit.");
         }
 
         boolean success = false;
@@ -65,6 +65,28 @@ public class ActiveTransaction implements Transaction {
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+        if (xid != this.xid) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed to transaction commit.");
+        }
+
+        boolean success = false;
+
+        // send the abort command to every resource manager involved in this transaction
+        for (ResourceManager rm: this.activeManagers) {
+
+            try {
+
+                rm.abort(xid);
+
+            } catch(InvalidTransactionException | RemoteException e) {
+
+                throw e;
+
+            }
+
+        }
+
 
     }
 

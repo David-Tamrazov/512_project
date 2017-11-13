@@ -37,11 +37,12 @@ public class TransactionManager implements Transaction {
 
     }
 
+
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
         // if the transaction doesn't exist in the list of active transactions, throw an exception
         if (!this.activeTransactions.containsKey(xid)) {
-            throw new InvalidTransactionException(xid, "Invalid transaction passed for commit.");
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for commit.");
         }
 
         // remove the transaction from the list of transactions a
@@ -61,10 +62,15 @@ public class TransactionManager implements Transaction {
 
         }
 
-
     }
 
+
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+        // if the transaction doesn't exist in the list of active transactions, throw an exception
+        if (!this.activeTransactions.containsKey(xid)) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for commit.");
+        }
 
         ActiveTransaction t = this.getActiveTransactions().get(xid);
         this.getActiveTransactions().remove(xid);
@@ -98,6 +104,7 @@ public class TransactionManager implements Transaction {
         shallowCopy.putAll(this.activeTransactions);
         return shallowCopy;
     }
+
 
     private void setKeepaliveThread(Map<Integer, ActiveTransaction> activeTransactions) {
         KeepaliveThread t = new KeepaliveThread(activeTransactions);
