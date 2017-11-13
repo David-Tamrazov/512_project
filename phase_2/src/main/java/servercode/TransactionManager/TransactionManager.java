@@ -15,11 +15,13 @@ public class TransactionManager implements Transaction {
     private Map<Integer, ActiveTransaction> activeTransactions;
     private MiddlewareServer parent;
     private int xid;
+    private KeepaliveThread t;
 
     public TransactionManager(MiddlewareServer parent, Map<Integer, ActiveTransaction> activeTransactions) {
         setParent(parent);
         setTransactionMap(activeTransactions);
         setXID();
+        setKeepaliveThread(activeTransactions);
     }
 
     public int start()  {
@@ -35,11 +37,12 @@ public class TransactionManager implements Transaction {
 
     }
 
+
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
         // if the transaction doesn't exist in the list of active transactions, throw an exception
         if (!this.activeTransactions.containsKey(xid)) {
-            throw new InvalidTransactionException(xid, "Invalid transaction passed for commit.");
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for commit.");
         }
 
         // remove the transaction from the list of transactions a
@@ -59,11 +62,26 @@ public class TransactionManager implements Transaction {
 
         }
 
-
     }
+
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
 
+        // if the transaction doesn't exist in the list of active transactions, throw an exception
+        if (!this.activeTransactions.containsKey(xid)) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for commit.");
+        }
+
+        ActiveTransaction t = this.getActiveTransactions().get(xid);
+        this.getActiveTransactions().remove(xid);
+
+        try {
+
+            t.abort(xid);
+
+        } catch(InvalidTransactionException | RemoteException e) {
+            throw e;
+        }
     }
 
 
@@ -72,6 +90,9 @@ public class TransactionManager implements Transaction {
         if (!addActiveManager(xid, rm)) {
             throw new InvalidTransactionException(xid, "Invalid transaction id passed for txn operation");
         }
+
+        // update the keepalive timer
+        this.activeTransactions.get(xid).updateLastTransaction();
 
         return true;
 
@@ -82,6 +103,12 @@ public class TransactionManager implements Transaction {
         Map<Integer, ActiveTransaction> shallowCopy = new HashMap<Integer, ActiveTransaction>();
         shallowCopy.putAll(this.activeTransactions);
         return shallowCopy;
+    }
+
+
+    private void setKeepaliveThread(Map<Integer, ActiveTransaction> activeTransactions) {
+        KeepaliveThread t = new KeepaliveThread(activeTransactions);
+        t.run();
     }
 
     private boolean addActiveManager(int xid, ResourceManager rm) {

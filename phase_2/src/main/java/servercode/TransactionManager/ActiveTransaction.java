@@ -4,6 +4,7 @@ import java.rmi.RemoteException;
 import java.util.*;
 import servercode.ResInterface.ResourceManager;
 import servercode.ResInterface.Transaction;
+import java.sql.Timestamp;
 
 public class ActiveTransaction implements Transaction {
 
@@ -13,6 +14,7 @@ public class ActiveTransaction implements Transaction {
     // how long this transaction has to live 
     private int timeToLive;
     private int xid;
+    private Date lastTransationTime;
 
     public ActiveTransaction(int xid, int timeToLive, ArrayList<ResourceManager> resourceManagers) {
         setXID(xid);
@@ -39,7 +41,7 @@ public class ActiveTransaction implements Transaction {
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
 
         if (xid != this.xid) {
-            throw new InvalidTransactionException(xid, "Invalid transaction exception passed to transaction commit.");
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed to transaction commit.");
         }
 
         boolean success = false;
@@ -64,6 +66,40 @@ public class ActiveTransaction implements Transaction {
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
 
+        if (xid != this.xid) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed to transaction commit.");
+        }
+
+        boolean success = false;
+
+        // send the abort command to every resource manager involved in this transaction
+        for (ResourceManager rm: this.activeManagers) {
+
+            try {
+
+                rm.abort(xid);
+
+            } catch(InvalidTransactionException | RemoteException e) {
+
+                throw e;
+
+            }
+
+        }
+
+
+    }
+
+    public Date getLastTransationTime() {
+        return this.lastTransationTime;
+    }
+
+    public void updateLastTransaction() {
+        this.lastTransationTime =  new Date();
+    }
+
+    public int getTimeToLive() {
+        return this.timeToLive;
     }
 
     private void setXID(int i) {
