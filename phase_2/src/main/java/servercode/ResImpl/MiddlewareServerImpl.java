@@ -5,6 +5,7 @@ import servercode.TransactionManager.InvalidTransactionException;
 import servercode.TransactionManager.TransactionAbortedException;
 import servercode.TransactionManager.TransactionManager;
 
+import javax.annotation.Resource;
 import java.util.*;
 import java.io.*;
 
@@ -20,6 +21,7 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     
 
     Map<String, ResourceManager> resourceManagers;
+    TransactionManager tm;
 
     public MiddlewareServerImpl(Map<String, ResourceManager> map) {
         resourceManagers = map;
@@ -49,16 +51,37 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     }
 
     public int start()  {
-        return 0;
+
+        return tm.start();
+
     }
 
     public boolean commit(int xid) throws InvalidTransactionException, TransactionAbortedException, RemoteException {
-        return true;
+
+        try {
+
+            return tm.commit(xid);
+
+        } catch(InvalidTransactionException | TransactionAbortedException | RemoteException e) {
+
+            System.out.print(e);
+            return false;
+
+        }
+
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
 
+        try {
 
+            tm.abort(xid);
+
+        } catch(InvalidTransactionException | RemoteException e) {
+
+            System.out.print(e);
+
+        }
     }
 
         
@@ -66,13 +89,38 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     //  NOTE: if flightPrice <= 0 and the flight already exists, it maintains its current price
     public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
 
-        return this.getFlightManager().addFlight(id, flightNum, flightSeats, flightPrice);
+        ResourceManager rm = this.getFlightManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.addFlight(id, flightNum, flightSeats, flightPrice);
+
+        } catch( InvalidTransactionException e) {
+            System.out.print(e);
+            return false;
+        }
+
+
     }
 
 
     
     public boolean deleteFlight(int id, int flightNum) throws RemoteException {
-        return this.getFlightManager().deleteFlight(id, flightNum);
+
+        ResourceManager rm = this.getFlightManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.deleteFlight(id, flightNum);
+
+        } catch( InvalidTransactionException e) {
+            System.out.print(e);
+            return false;
+        }
+
+
     }
 
 
@@ -80,32 +128,103 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     // Create a new room location or add rooms to an existing location
     //  NOTE: if price <= 0 and the room location already exists, it maintains its current price
     public boolean addRooms(int id, String location, int count, int price) throws RemoteException {
-        return this.getRoomManager().addRooms(id, location, count, price);
+
+        ResourceManager rm = this.getRoomManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.addRooms(id, location, count, price);
+
+        } catch( InvalidTransactionException e) {
+            System.out.print(e);
+            return false;
+        }
+
+
     }
 
     // Delete rooms from a location
     public boolean deleteRooms(int id, String location) throws RemoteException {
-        return this.getRoomManager().deleteRooms(id, location);
+
+        ResourceManager rm = this.getRoomManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.deleteRooms(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return false;
+
+        }
+
         
     }
 
     // Create a new car location or add cars to an existing location
     //  NOTE: if price <= 0 and the location already exists, it maintains its current price
     public boolean addCars(int id, String location, int count, int price) throws RemoteException {
-        return this.getCarManager().addCars(id, location, count, price);
+
+        ResourceManager rm = this.getCarManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.addCars(id, location, count, price);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return false;
+
+        }
+
     }
 
 
     // Delete cars from a location
     public boolean deleteCars(int id, String location) throws RemoteException {
-        return this.getCarManager().deleteCars(id, location);
+
+        ResourceManager rm = this.getCarManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.deleteCars(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return false;
+
+        }
+
+
     }
 
 
 
     // Returns the number of empty seats on this flight
     public int queryFlight(int id, int flightNum) throws RemoteException {
-        return this.getFlightManager().queryFlight(id, flightNum);
+
+        ResourceManager rm = this.getFlightManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return this.getFlightManager().queryFlight(id, flightNum);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
+
     }
 
     // Returns the number of reservations for this flight. 
@@ -124,13 +243,41 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
     // Returns price of this flight
     public int queryFlightPrice(int id, int flightNum ) throws RemoteException {
-        return this.getFlightManager().queryFlightPrice(id, flightNum);
+
+        ResourceManager rm = this.getFlightManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.queryFlightPrice(id, flightNum);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
     }
 
 
     // Returns the number of rooms available at a location
     public int queryRooms(int id, String location) throws RemoteException {
-        return this.getRoomManager().queryRooms(id, location);
+
+        ResourceManager rm = this.getRoomManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.queryRooms(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
     }
 
 
@@ -138,19 +285,62 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     
     // Returns room price at this location
     public int queryRoomsPrice(int id, String location) throws RemoteException {
-        return this.getRoomManager().queryRoomsPrice(id, location);
+
+        ResourceManager rm = this.getRoomManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.queryRoomsPrice(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
     }
 
 
     // Returns the number of cars available at a location
     public int queryCars(int id, String location) throws RemoteException {
-        return this.getCarManager().queryCars(id, location);
+
+        ResourceManager rm = this.getCarManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.queryCars(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
     }
 
 
     // Returns price of cars at this location
     public int queryCarsPrice(int id, String location) throws RemoteException {
-        return this.getCarManager().queryCarsPrice(id, location);
+
+        ResourceManager rm = this.getCarManager();
+
+        try{
+
+            this.tm.transactionOperation(id, rm);
+            return rm.queryCarsPrice(id, location);
+
+        } catch( InvalidTransactionException e) {
+
+            System.out.print(e);
+            return -1;
+
+        }
+
+
     }
 
     // Returns data structure containing customer reservation info. Returns null if the
@@ -160,49 +350,157 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
     // return a bill
     public String queryCustomerInfo(int id, int customerID) throws RemoteException {
-        return "\n" + this.getCarManager().queryCustomerInfo(id, customerID) + "\n" +
-		this.getFlightManager().queryCustomerInfo(id, customerID) + "\n" + 
-    	this.getRoomManager().queryCustomerInfo(id, customerID);
+
+        try {
+
+            this.tm.transactionOperation(id, this.getFlightManager());
+            this.tm.transactionOperation(id, this.getCarManager());
+            this.tm.transactionOperation(id, this.getRoomManager());
+
+            return "\n" + this.getCarManager().queryCustomerInfo(id, customerID) + "\n" +
+                    this.getFlightManager().queryCustomerInfo(id, customerID) + "\n" +
+                    this.getRoomManager().queryCustomerInfo(id, customerID);
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return null;
+        }
+
     }
 
     // customer functions
     // new customer just returns a unique customer identifier
     
     public synchronized int newCustomer(int id) throws RemoteException {
-    	int cid = this.getCarManager().newCustomer(id);
-    	this.getFlightManager().newCustomer(id,cid);
-    	this.getRoomManager().newCustomer(id,cid);
-    	return cid;
+
+        try {
+
+            for (Map.Entry<String, ResourceManager> entry : this.resourceManagers.entrySet()) {
+                this.tm.transactionOperation(id, entry.getValue());
+            }
+
+            int cid = this.getCarManager().newCustomer(id);
+            this.getFlightManager().newCustomer(id,cid);
+            this.getRoomManager().newCustomer(id,cid);
+
+            return cid;
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return -1;
+        }
+
+
+
     }
 
     // I opted to pass in customerID instead. This makes testing easier
     public synchronized boolean newCustomer(int id, int customerID) throws RemoteException {
-        this.getCarManager().newCustomer(id, customerID);
-    	this.getFlightManager().newCustomer(id, customerID);
-    	return this.getRoomManager().newCustomer(id, customerID);
+
+        try {
+
+            for (Map.Entry<String, ResourceManager> entry : this.resourceManagers.entrySet()) {
+                this.tm.transactionOperation(id, entry.getValue());
+            }
+
+            return this.getRoomManager().newCustomer(id, customerID) &&
+                    this.getCarManager().newCustomer(id, customerID) &&
+                    this.getFlightManager().newCustomer(id, customerID);
+
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return false;
+
+        }
+
     }
 
 
     // Deletes customer from the database. 
     public synchronized boolean deleteCustomer(int id, int customerID) throws RemoteException {
-	    this.getCarManager().deleteCustomer(id, customerID);
-		this.getFlightManager().deleteCustomer(id, customerID);
-		return this.getRoomManager().deleteCustomer(id, customerID);   
+
+        try {
+
+            for (Map.Entry<String, ResourceManager> entry : this.resourceManagers.entrySet()) {
+                this.tm.transactionOperation(id, entry.getValue());
+            }
+
+            this.getCarManager().deleteCustomer(id, customerID);
+            this.getFlightManager().deleteCustomer(id, customerID);
+
+            return this.getRoomManager().deleteCustomer(id, customerID) &&
+                    this.getCarManager().deleteCustomer(id, customerID) &&
+                    this.getFlightManager().deleteCustomer(id, customerID);
+
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return false;
+
+        }
     }
     
     // Adds car reservation to this customer. 
     public boolean reserveCar(int id, int customerID, String location) throws RemoteException {
-        return this.getCarManager().reserveCar(id, customerID, location);
+
+        ResourceManager rm = this.getCarManager();
+
+        try {
+
+            this.tm.transactionOperation(id, rm);
+            return rm.reserveCar(id, customerID, location);
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return false;
+
+        }
+
     }
 
 
     // Adds room reservation to this customer. 
     public boolean reserveRoom(int id, int customerID, String location) throws RemoteException {
-        return this.getCarManager().reserveRoom(id, customerID, location);
+
+        ResourceManager rm = this.getRoomManager();
+
+        try {
+
+            this.tm.transactionOperation(id, rm);
+            return this.getCarManager().reserveRoom(id, customerID, location);
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return false;
+
+        }
+
     }
     // Adds flight reservation to this customer.  
     public boolean reserveFlight(int id, int customerID, int flightNum) throws RemoteException {
-        return this.getFlightManager().reserveFlight(id, customerID, flightNum);
+
+        ResourceManager rm = this.getFlightManager();
+
+        try {
+
+            this.tm.transactionOperation(id, rm);
+            return this.getFlightManager().reserveFlight(id, customerID, flightNum);
+
+        } catch(InvalidTransactionException e) {
+
+            System.out.println(e);
+            return false;
+
+        }
+
+
     }
     
     // Reserve an itinerary 
@@ -214,7 +512,10 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         try {
 
-            boolean success = false; 
+            boolean success = false;
+
+            // inform the transaction manager that the flight manager is involved in this transaction now
+            this.tm.transactionOperation(id, this.getFlightManager());
 
             for (Object flightNum: (Vector)flightNumbers) {
     
@@ -224,12 +525,19 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     
             }
 
-            if ((Car && !this.getCarManager().reserveCar(id, customer, location)) ||
-                (Room && !this.getRoomManager().reserveRoom(id, customer, location))) {
-                return false;
+
+            if (Car) {
+                this.tm.transactionOperation(id, this.getCarManager());
+                success = this.getCarManager().reserveCar(id, customer, location);
             }
+
+            if (Room) {
+                this.tm.transactionOperation(id, this.getRoomManager());
+                success = this.getRoomManager().reserveRoom(id, customer, location);
+            }
+
     
-            return true;
+            return success;
            
         } catch (Exception e) {
 

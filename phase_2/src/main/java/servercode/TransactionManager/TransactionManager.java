@@ -1,14 +1,12 @@
 package servercode.TransactionManager;
 
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
 
 import org.omg.CORBA.DynAnyPackage.Invalid;
 import org.omg.PortableInterceptor.ACTIVE;
-import servercode.LockManager.DeadlockException;
+
 import servercode.ResInterface.MiddlewareServer;
-import servercode.LockManager.LockManager;
 import servercode.ResInterface.ResourceManager;
 import servercode.ResInterface.Transaction;
 
@@ -18,20 +16,10 @@ public class TransactionManager implements Transaction {
     private MiddlewareServer parent;
     private int xid;
 
-    public TransactionManager(MiddlewareServer parent, Map<Integer, ActiveTransaction> activeTransactions, LockManager lm) {
+    public TransactionManager(MiddlewareServer parent, Map<Integer, ActiveTransaction> activeTransactions) {
         setParent(parent);
         setTransactionMap(activeTransactions);
         setXID();
-    }
-
-    public boolean transactionOperation(int xid, int locktype, String strData, ResourceManager rm) throws InvalidTransactionException, RemoteException {
-
-        if (!addActiveManager(xid, rm)) {
-            throw new InvalidTransactionException(xid, "Invalid transaction id passed for txn operation");
-        }
-
-        return true;
-
     }
 
     public int start()  {
@@ -75,6 +63,17 @@ public class TransactionManager implements Transaction {
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
+
+    }
+
+
+    public boolean transactionOperation(int xid, ResourceManager rm) throws InvalidTransactionException, RemoteException {
+
+        if (!addActiveManager(xid, rm)) {
+            throw new InvalidTransactionException(xid, "Invalid transaction id passed for txn operation");
+        }
+
+        return true;
 
     }
 
