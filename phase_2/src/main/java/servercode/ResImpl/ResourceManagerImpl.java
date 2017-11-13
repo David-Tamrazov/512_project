@@ -120,9 +120,19 @@ public class ResourceManagerImpl implements ResourceManager {
             throw new InvalidTransactionException(xid, xid + " isn't a valid transaction id");
         }
 
-        for (Map.Entry<String, HashMap> operationSetEntry : ((HashMap<String, HashMap>)operationSet.get(xid)).entrySet()) {
-            m_itemHT.put(operationSetEntry.getKey(), operationSetEntry.getValue());
-        }
+        for (Map.Entry<String, RMItem> operationSetEntry : ((HashMap<String, RMItem>)operationSet.get(xid)).entrySet()) {
+
+            if(operationSetEntry.getValue() instanceof Customer && ((Customer)operationSetEntry.getValue()).getID() == -1) {
+
+                m_itemHT.remove(operationSetEntry.getKey());
+
+            } else {
+
+                m_itemHT.put(operationSetEntry.getKey(), operationSetEntry.getValue());
+
+            }
+
+         }
 
 //        for (Object key : (ArrayList) removeSet.get(xid)) {
 //            m_itemHT.remove(key);
@@ -150,7 +160,7 @@ public class ResourceManagerImpl implements ResourceManager {
      
 
     // Reads a data item
-    private RMItem readData( int id, String key ) {
+    private RMItem readData( int id, String key ) throws DeadlockException {
 
         try {
 
@@ -158,13 +168,14 @@ public class ResourceManagerImpl implements ResourceManager {
             boolean locked = lm.Lock(id, key, LockManager.READ);
 
             // read and return the item
-            return (RMItem) readData(id, key);
+            return read(id, key);
 
-
-            // return null and check for it on the mws
-        } catch (DeadlockException e) {
-            return null;
+        } catch(DeadlockException e) {
+            throw e;
         }
+
+
+
     }
 
     // Reads a data item
@@ -191,19 +202,12 @@ public class ResourceManagerImpl implements ResourceManager {
     }
 
     // Writes a data item
-    private boolean writeData( int id, String key, RMItem value ) {
+    private boolean writeData( int id, String key, RMItem value ) throws DeadlockException {
 
-        try {
-
-            // obtain the lock and perform the write
-            boolean locked = lm.Lock(id, key, LockManager.WRITE);
-            write(id, key, value);
-            return true;
-
-
-        } catch (DeadlockException e) {
-            return false;
-        }
+        // obtain the lock and perform the write
+        boolean locked = lm.Lock(id, key, LockManager.WRITE);
+        write(id, key, value);
+        return true;
 
     }
 
@@ -218,16 +222,10 @@ public class ResourceManagerImpl implements ResourceManager {
     }
 
     // Remove the item out of storage
-    protected RMItem removeData(int id, String key) {
+    protected RMItem removeData(int id, String key) throws DeadlockException {
 
-        try {
-
-            lm.Lock(id, key, LockManager.WRITE);
-            return remove(id, key);
-
-        } catch (DeadlockException e) {
-            return null;
-        }
+        lm.Lock(id, key, LockManager.WRITE);
+        return remove(id, key);
 
     }
 
@@ -236,22 +234,13 @@ public class ResourceManagerImpl implements ResourceManager {
 
         RMItem deleteItem = new Customer(-1);
 
-        RMItem originalItem;
-
-
         synchronized (operationSet) {
 
-            if(!operationSet.containsKey(id) ) {
 
-                operationSet.put(id, new HashMap());
+            RMItem originalItem = (RMItem) ((HashMap) (operationSet.get(id))).get(key);
+            write (id, key, deleteItem);
 
-//                originalItem =
-            }
-
-            HashMap<String, RMItem> removeSet = (HashMap<String, RMItem>) operationSet.get(id);
-            removeSet.put(key, deleteItem);
-
-            return deleteItem;
+            return originalItem;
 
 
         }
@@ -261,10 +250,11 @@ public class ResourceManagerImpl implements ResourceManager {
     
     
     // deletes the entire item
-    protected boolean deleteItem(int id, String key)
-    {
+    protected boolean deleteItem(int id, String key) throws DeadlockException {
         Trace.info("RM::deleteItem(" + id + ", " + key + ") called" );
+
         ReservableItem curObj = (ReservableItem) readData( id, key );
+
         // Check if there is such an item in the storage
         if ( curObj == null ) {
             Trace.warn("RM::deleteItem(" + id + ", " + key + ") failed--item doesn't exist" );
@@ -279,44 +269,54 @@ public class ResourceManagerImpl implements ResourceManager {
                 Trace.info("RM::deleteItem(" + id + ", " + key + ") item can't be deleted because some customers reserved it" );
                 return false;
             }
-        } // if
+        }
+
     }
     
 
     // query the number of available seats/rooms/cars
-    protected int queryNum(int id, String key) {
+    protected int queryNum(int id, String key) throws DeadlockException {
+
         Trace.info("RM::queryNum(" + id + ", " + key + ") called" );
         ReservableItem curObj = (ReservableItem) readData( id, key);
-        int value = 0;  
+        int value = 0;
+
         if ( curObj != null ) {
             value = curObj.getCount();
-        } // else
+        }
+
         Trace.info("RM::queryNum(" + id + ", " + key + ") returns count=" + value);
         return value;
+
     }    
     
     // query the price of an item
-    protected int queryPrice(int id, String key) {
+    protected int queryPrice(int id, String key) throws DeadlockException {
+
         Trace.info("RM::queryCarsPrice(" + id + ", " + key + ") called" );
         ReservableItem curObj = (ReservableItem) readData( id, key);
-        int value = 0; 
+        int value = 0;
         if ( curObj != null ) {
             value = curObj.getPrice();
         } // else
         Trace.info("RM::queryCarsPrice(" + id + ", " + key + ") returns cost=$" + value );
-        return value;        
+        return value;
+
     }
     
     // reserve an item
-    protected boolean reserveItem(int id, int customerID, String key, String location) {
-        Trace.info("RM::reserveItem( " + id + ", customer=" + customerID + ", " +key+ ", "+location+" ) called" );        
+    protected boolean reserveItem(int id, int customerID, String key, String location) throws DeadlockException {
+
+        Trace.info("RM::reserveItem( " + id + ", customer=" + customerID + ", " +key+ ", "+location+" ) called" );
+
         // Read customer object if it exists (and read lock it)
-        Customer cust = (Customer) readData( id, Customer.getKey(customerID) );        
+        Customer cust = (Customer) readData( id, Customer.getKey(customerID) );
+
         if ( cust == null ) {
             Trace.warn("RM::reserveCar( " + id + ", " + customerID + ", " + key + ", "+location+")  failed--customer doesn't exist" );
             return false;
-        } 
-        
+        }
+
         // check if the item is available
         ReservableItem item = (ReservableItem)readData(id, key);
         if ( item == null ) {
@@ -325,26 +325,27 @@ public class ResourceManagerImpl implements ResourceManager {
         } else if (item.getCount()==0) {
             Trace.warn("RM::reserveItem( " + id + ", " + customerID + ", " + key+", " + location+") failed--No more items" );
             return false;
-        } else {            
-            cust.reserve( key, location, item.getPrice());        
+        } else {
+            cust.reserve( key, location, item.getPrice());
             writeData( id, cust.getKey(), cust );
-            
+
             // decrease the number of available items in the storage
             item.setCount(item.getCount() - 1);
             item.setReserved(item.getReserved()+1);
-            
+
             Trace.info("RM::reserveItem( " + id + ", " + customerID + ", " + key + ", " +location+") succeeded" );
             return true;
-        }        
+        }
+
+
     }
     
     // Create a new flight, or add seats to existing flight
     //  NOTE: if flightPrice <= 0 and the flight already exists, it maintains its current price
-    public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice)
-        throws RemoteException
-    {
+    public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
         Trace.info("RM::addFlight(" + id + ", " + flightNum + ", $" + flightPrice + ", " + flightSeats + ") called" );
         Flight curObj = (Flight) readData( id, Flight.getKey(flightNum) );
+
         if ( curObj == null ) {
             // doesn't exist...add it
             Flight newObj = new Flight( flightNum, flightSeats, flightPrice );
@@ -360,14 +361,13 @@ public class ResourceManagerImpl implements ResourceManager {
             writeData( id, curObj.getKey(), curObj );
             Trace.info("RM::addFlight(" + id + ") modified existing flight " + flightNum + ", seats=" + curObj.getCount() + ", price=$" + flightPrice );
         } // else
+
         return(true);
     }
 
 
     
-    public boolean deleteFlight(int id, int flightNum)
-        throws RemoteException
-    {
+    public boolean deleteFlight(int id, int flightNum) throws RemoteException {
         return deleteItem(id, Flight.getKey(flightNum));
     }
 
@@ -407,9 +407,7 @@ public class ResourceManagerImpl implements ResourceManager {
 
     // Create a new car location or add cars to an existing location
     //  NOTE: if price <= 0 and the location already exists, it maintains its current price
-    public boolean addCars(int id, String location, int count, int price)
-        throws RemoteException
-    {
+    public boolean addCars(int id, String location, int count, int price) throws RemoteException {
         Trace.info("RM::addCars(" + id + ", " + location + ", " + count + ", $" + price + ") called" );
         Car curObj = (Car) readData( id, Car.getKey(location) );
         if ( curObj == null ) {

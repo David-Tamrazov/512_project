@@ -4,7 +4,7 @@ package servercode.LockManager;
     The transaction is deadlocked.  Somebody should abort it.
 */
 
-public class DeadlockException extends Exception
+public class DeadlockException extends RuntimeException
 {
     private int xid = 0;
     
@@ -14,7 +14,7 @@ public class DeadlockException extends Exception
         this.xid = xid;
     }
     
-    int GetXId()
+    public int getXID()
     {
         return xid;
     }

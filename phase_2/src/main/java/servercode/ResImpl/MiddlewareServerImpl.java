@@ -1,5 +1,7 @@
 package servercode.ResImpl;
 
+import javafx.beans.InvalidationListener;
+import servercode.LockManager.DeadlockException;
 import servercode.ResInterface.*;
 import servercode.TransactionManager.InvalidTransactionException;
 import servercode.TransactionManager.TransactionAbortedException;
@@ -91,14 +93,18 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         ResourceManager rm = this.getFlightManager();
 
-        try{
 
-            this.tm.transactionOperation(id, rm);
-            return rm.addFlight(id, flightNum, flightSeats, flightPrice);
+        try {
 
-        } catch( InvalidTransactionException e) {
-            System.out.print(e);
-            return false;
+            //this.tm.transactionOperation(id, rm);
+            rm.addFlight(id, flightNum, flightSeats, flightPrice);
+            return true;
+
+        }  catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
 
 
@@ -116,8 +122,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
             return rm.deleteFlight(id, flightNum);
 
         } catch( InvalidTransactionException e) {
+
             System.out.print(e);
             return false;
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
 
 
@@ -137,8 +150,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
             return rm.addRooms(id, location, count, price);
 
         } catch( InvalidTransactionException e) {
-            System.out.print(e);
-            return false;
+
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
 
 
@@ -156,8 +175,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -177,8 +200,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -197,8 +224,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -219,8 +250,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -246,15 +281,19 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         ResourceManager rm = this.getFlightManager();
 
-        try{
+        try {
 
-            this.tm.transactionOperation(id, rm);
+            tm.transactionOperation(id, rm);
             return rm.queryFlightPrice(id, flightNum);
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -273,8 +312,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -295,8 +338,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -315,8 +362,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -335,8 +386,12 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
         } catch( InvalidTransactionException e) {
 
-            System.out.print(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -361,10 +416,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
                     this.getFlightManager().queryCustomerInfo(id, customerID) + "\n" +
                     this.getRoomManager().queryCustomerInfo(id, customerID);
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return null;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
 
     }
@@ -386,10 +446,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
             return cid;
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return -1;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
 
 
@@ -410,10 +475,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
                     this.getFlightManager().newCustomer(id, customerID);
 
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -437,10 +506,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
                     this.getFlightManager().deleteCustomer(id, customerID);
 
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
     }
@@ -455,10 +528,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
             this.tm.transactionOperation(id, rm);
             return rm.reserveCar(id, customerID, location);
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -475,10 +552,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
             this.tm.transactionOperation(id, rm);
             return this.getCarManager().reserveRoom(id, customerID, location);
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -493,10 +574,14 @@ public class MiddlewareServerImpl implements MiddlewareServer {
             this.tm.transactionOperation(id, rm);
             return this.getFlightManager().reserveFlight(id, customerID, flightNum);
 
-        } catch(InvalidTransactionException e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println(e);
-            return false;
+            throw new RemoteException("Invalid transaction id passed: " + id);
+
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
 
         }
 
@@ -525,7 +610,6 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     
             }
 
-
             if (Car) {
                 this.tm.transactionOperation(id, this.getCarManager());
                 success = this.getCarManager().reserveCar(id, customer, location);
@@ -539,13 +623,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
     
             return success;
            
-        } catch (Exception e) {
+        } catch( InvalidTransactionException e) {
 
-            System.out.println("EXCEPTION:");
-            System.out.println(e.getMessage());
-            e.printStackTrace();
+            throw new RemoteException("Invalid transaction id passed: " + id);
 
-            return false;
+        } catch (DeadlockException e) {
+
+            handleDeadlock(e.getXID());
+            throw new RemoteException("Transaction aborted: deadlock");
+
         }
     }
 
@@ -629,5 +715,15 @@ public class MiddlewareServerImpl implements MiddlewareServer {
 
     }
 
+    private void handleDeadlock(int xid) {
+
+        try {
+            abort(xid);
+        } catch (InvalidTransactionException | RemoteException e) {
+
+            System.out.println("Invalid transaction passed to abort.");
+        }
+
+    }
 
 }

@@ -70,7 +70,8 @@ public class LockManager
                             System.out.println("Lock conversion.");
 
                             // remove the old locks from the hashtable
-                            this.lockTable.removeAll(trxnObj);
+                            this.lockTable.remove(trxnObj);
+                            this.lockTable.remove(dataObj);
 
                             // add the new lock they're requesting 
                             this.lockTable.add(dataObj);
